@@ -3,10 +3,10 @@ package recorder
 import (
 	"context"
 	"fmt"
+	eventstores2 "github.com/loft-sh/magpie/pkg/eventstores"
 
 	"github.com/loft-sh/magpie/pkg/client/filtered"
 	"github.com/loft-sh/magpie/pkg/eventstores/idempotent"
-	"github.com/loft-sh/magpie/types"
 	errors2 "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -48,14 +48,14 @@ type Reconciler struct {
 	filteredReader filtered.Reader
 	configMapNS    string
 	target         Target
-	store          types.EventStore
+	store          eventstores2.EventStore
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	obj, err := r.filteredReader.Get(ctx, client.ObjectKey{Name: request.Name, Namespace: request.Namespace})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			err = r.SyncTargetDelete(ctx, types.ResourceKey{NamespacedName: request.NamespacedName})
+			err = r.SyncTargetDelete(ctx, eventstores2.ResourceKey{NamespacedName: request.NamespacedName})
 			if err != nil {
 				return reconcile.Result{}, errors2.Wrap(err, "failed to sync delete event")
 			}
@@ -78,14 +78,14 @@ func (r *Reconciler) SyncTargetCreate(ctx context.Context, obj unstructured.Unst
 
 	err := r.store.Add(
 		ctx,
-		types.KeyedEvent{
-			Key: types.ResourceKey{
+		eventstores2.KeyedEvent{
+			Key: eventstores2.ResourceKey{
 				NamespacedName: ktypes.NamespacedName{
 					Namespace: obj.GetNamespace(),
 					Name:      obj.GetName()},
 				UID: obj.GetUID(),
 			},
-			Event: types.Event{Obj: obj.Object, EventType: types.Create},
+			Event: eventstores2.Event{Obj: obj.Object, EventType: eventstores2.Create},
 		})
 	if err != nil {
 		return fmt.Errorf("failed to add event to store: %w", err)
@@ -94,12 +94,12 @@ func (r *Reconciler) SyncTargetCreate(ctx context.Context, obj unstructured.Unst
 	return nil
 }
 
-func (r *Reconciler) SyncTargetDelete(ctx context.Context, key types.ResourceKey) error {
+func (r *Reconciler) SyncTargetDelete(ctx context.Context, key eventstores2.ResourceKey) error {
 	if !r.target.TrackDelete {
 		return nil
 	}
 
-	err := r.store.Add(ctx, types.KeyedEvent{Key: key, Event: types.Event{EventType: types.Delete}})
+	err := r.store.Add(ctx, eventstores2.KeyedEvent{Key: key, Event: eventstores2.Event{EventType: eventstores2.Delete}})
 	if err != nil {
 		return errors2.Wrapf(err, "failed to add event to store")
 	}

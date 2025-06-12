@@ -1,4 +1,4 @@
-package types
+package eventstores
 
 import (
 	"fmt"
@@ -19,9 +19,10 @@ type eventType int
 
 type Event struct {
 	Obj       map[string]interface{} `json:"obj,omitempty"`
-	EventType eventType              `json:"event_type,omitempty"`
-	UID       types.UID              `json:"uid,omitempty"`
-	Time      time.Time              `json:"time,omitempty"`
+	EventType eventType `json:"event_type,omitempty"`
+	ObjUID    types.UID `json:"obj_uid,omitempty"`
+	Time      time.Time `json:"time,omitempty"`
+	EventID   string    `json:"event_id,omitempty"`
 }
 
 type KeyedEvent struct {

@@ -1,4 +1,4 @@
-package types
+package eventstores
 
 import (
 	"context"
@@ -7,7 +7,9 @@ import (
 )
 
 type EventStore interface {
+	ListAll() ([]KeyedEvent, error)
 	List(ctx context.Context, key ResourceKey) ([]Event, error)
 	Add(ctx context.Context, event ...KeyedEvent) error
 	GetResourceKeyFromUnstructured(obj unstructured.Unstructured) ResourceKey
+	ClearEvents(ids ...string) error
 }
