@@ -12,14 +12,14 @@ type CollectorServer struct {
 	*http.ServeMux
 }
 
-type logs struct {
+type Logs struct {
 	GVK    schema.GroupVersionKind `json:"gvk"`
 	Events map[string]interface{}  `json:"events"`
 }
 
 var _ http.Handler = (*CollectorServer)(nil)
 
-func New() *CollectorServer {
+func NewCollectorServer() *CollectorServer {
 	server := &CollectorServer{
 		ServeMux: http.NewServeMux(),
 	}
@@ -33,7 +33,7 @@ func (c *CollectorServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	receivedLogs := logs{}
+	receivedLogs := Logs{}
 	err := json.NewDecoder(r.Body).Decode(&receivedLogs)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)

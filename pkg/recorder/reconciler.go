@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	eventstores2 "github.com/loft-sh/magpie/pkg/eventstores"
+	sender2 "github.com/loft-sh/magpie/pkg/sender"
 
 	"github.com/loft-sh/magpie/pkg/client/filtered"
 	"github.com/loft-sh/magpie/pkg/eventstores/idempotent"
@@ -107,7 +108,7 @@ func (r *Reconciler) SyncTargetDelete(ctx context.Context, key eventstores2.Reso
 	return nil
 }
 
-func SetupWithManagerForTargets(ctx context.Context, mgr ctrl.Manager, targets []Target, cmNS string) error {
+func SetupWithManagerForTargets(ctx context.Context, mgr ctrl.Manager, targets []Target, cmNS, url string) error {
 	for _, target := range targets {
 		filteredReader := filtered.NewReader(mgr.GetClient(), target.GVK, append(target.Fields, requiredFields...))
 		eventStore, err := idempotent.NewStore(cmNS, target.GVK, mgr.GetClient(), filteredReader)
@@ -115,6 +116,15 @@ func SetupWithManagerForTargets(ctx context.Context, mgr ctrl.Manager, targets [
 			return errors2.Wrap(err, "failed to create event store")
 		}
 
+		sender := &sender2.Sender{
+			URL: url,
+		}
+		go func() {
+			err := sender.Run(ctx)
+			if err != nil {
+				panic(err)
+			}
+		}()
 		r := &Reconciler{
 			Client:         mgr.GetClient(),
 			filteredReader: filteredReader,

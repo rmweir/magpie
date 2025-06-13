@@ -34,6 +34,16 @@ type Store struct {
 	gvk            schema.GroupVersionKind
 }
 
+func (e *Store) ClearEvents(ids ...string) error {
+	fmt.Println("debug")
+	return nil
+}
+
+func (e *Store) ListAll() ([]eventstores2.KeyedEvent, error) {
+	fmt.Println("debug")
+	return nil, nil
+}
+
 func NewStore(ns string, gvk schema.GroupVersionKind, client client.Client, reader filtered.Reader) (*Store, error) {
 	return &Store{configMapNS: ns, gvk: gvk, client: client, filteredReader: reader}, nil
 }
