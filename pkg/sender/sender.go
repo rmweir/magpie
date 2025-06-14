@@ -13,12 +13,12 @@ import (
 )
 
 type storeReader interface {
-	ListAll() ([]eventstores.KeyedEvent, error)
+	ListAll(ctx context.Context) ([]eventstores.KeyedEvent, error)
 	ClearEvents(ids ...string) error
 }
 type Sender struct {
 	URL   string
-	store storeReader
+	Store storeReader
 }
 
 func (s *Sender) Run(ctx context.Context) error {
@@ -26,7 +26,7 @@ func (s *Sender) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-timer:
-			events, err := s.store.ListAll()
+			events, err := s.Store.ListAll(ctx)
 			if err != nil {
 				log.Errorf(ctx, "failed to list all events: %v", err)
 				continue
@@ -48,7 +48,9 @@ func (s *Sender) Run(ctx context.Context) error {
 				log.Errorf(ctx, "failed to read response body: %v", err)
 				continue
 			}
-			log.Infof(ctx, "events: %v", string(respBody))
+			if len(respBody) != 0 {
+				log.Infof(ctx, "events: %v", string(respBody))
+			}
 		case <-ctx.Done():
 			return nil
 		}

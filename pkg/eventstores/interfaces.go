@@ -7,7 +7,7 @@ import (
 )
 
 type EventStore interface {
-	ListAll() ([]KeyedEvent, error)
+	ListAll(ctx context.Context) ([]KeyedEvent, error)
 	List(ctx context.Context, key ResourceKey) ([]Event, error)
 	Add(ctx context.Context, event ...KeyedEvent) error
 	GetResourceKeyFromUnstructured(obj unstructured.Unstructured) ResourceKey

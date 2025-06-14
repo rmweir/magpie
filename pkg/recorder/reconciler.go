@@ -117,7 +117,8 @@ func SetupWithManagerForTargets(ctx context.Context, mgr ctrl.Manager, targets [
 		}
 
 		sender := &sender2.Sender{
-			URL: url,
+			URL:   url,
+			Store: eventStore,
 		}
 		go func() {
 			err := sender.Run(ctx)

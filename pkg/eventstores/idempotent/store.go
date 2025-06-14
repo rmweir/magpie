@@ -3,13 +3,13 @@ package idempotent
 import (
 	"context"
 	"fmt"
-	eventstores2 "github.com/loft-sh/magpie/pkg/eventstores"
 	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/loft-sh/magpie/pkg/client/filtered"
+	eventstores2 "github.com/loft-sh/magpie/pkg/eventstores"
 	errors2 "github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -39,11 +39,40 @@ func (e *Store) ClearEvents(ids ...string) error {
 	return nil
 }
 
-func (e *Store) ListAll() ([]eventstores2.KeyedEvent, error) {
-	fmt.Println("debug")
-	return nil, nil
+func (e *Store) ListAll(ctx context.Context) ([]eventstores2.KeyedEvent, error) {
+	cm, err := e.getGVKConfigMap(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get configmap: %w", err)
+	}
+
+	allKeyedEvents := make([]eventstores2.KeyedEvent, 0)
+	for key := range cm.Data {
+		resourceKey, err := parseResourceKeyFromString(key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse resource key from configmap: %w", err)
+		}
+
+		events, err := e.listEventsFromConfigMap(cm, resourceKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list events from configmap for resoure key: %w", err)
+		}
+
+		allKeyedEvents = append(allKeyedEvents, convertEventsToKeyedEvents(resourceKey, events...)...)
+	}
+
+	return allKeyedEvents, nil
 }
 
+func convertEventsToKeyedEvents(resourceKey eventstores2.ResourceKey, events ...eventstores2.Event) []eventstores2.KeyedEvent {
+	keyedEvents := make([]eventstores2.KeyedEvent, len(events))
+	for index, event := range events {
+		keyedEvents[index] = eventstores2.KeyedEvent{
+			Key:   resourceKey,
+			Event: event,
+		}
+	}
+	return keyedEvents
+}
 func NewStore(ns string, gvk schema.GroupVersionKind, client client.Client, reader filtered.Reader) (*Store, error) {
 	return &Store{configMapNS: ns, gvk: gvk, client: client, filteredReader: reader}, nil
 }
