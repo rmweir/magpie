@@ -3,11 +3,10 @@ package recorder
 import (
 	"context"
 	"fmt"
-	eventstores2 "github.com/loft-sh/magpie/pkg/eventstores"
-	sender2 "github.com/loft-sh/magpie/pkg/sender"
-
 	"github.com/loft-sh/magpie/pkg/client/filtered"
+	eventstores2 "github.com/loft-sh/magpie/pkg/eventstores"
 	"github.com/loft-sh/magpie/pkg/eventstores/idempotent"
+	sender2 "github.com/loft-sh/magpie/pkg/reporting/sender"
 	errors2 "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -117,8 +116,9 @@ func SetupWithManagerForTargets(ctx context.Context, mgr ctrl.Manager, targets [
 		}
 
 		sender := &sender2.Sender{
-			URL:   url,
-			Store: eventStore,
+			URL:     url,
+			Reader:  eventStore,
+			Clearer: eventStore,
 		}
 		go func() {
 			err := sender.Run(ctx)

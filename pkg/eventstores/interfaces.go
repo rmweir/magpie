@@ -11,5 +11,5 @@ type EventStore interface {
 	List(ctx context.Context, key ResourceKey) ([]Event, error)
 	Add(ctx context.Context, event ...KeyedEvent) error
 	GetResourceKeyFromUnstructured(obj unstructured.Unstructured) ResourceKey
-	ClearEvents(ids ...string) error
+	ClearEvents(ctx context.Context, events []KeyedEvent) error
 }
