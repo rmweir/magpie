@@ -3,9 +3,11 @@ package recorder
 import (
 	"context"
 	"fmt"
-	"github.com/loft-sh/magpie/pkg/client/filtered"
-	eventstores2 "github.com/loft-sh/magpie/pkg/eventstores"
-	"github.com/loft-sh/magpie/pkg/eventstores/idempotent"
+
+	"github.com/loft-sh/magpie/pkg/clients/filtered"
+	"github.com/loft-sh/magpie/pkg/clients/sign"
+	eventstores2 "github.com/loft-sh/magpie/pkg/events"
+	"github.com/loft-sh/magpie/pkg/events/stores/idempotent"
 	sender2 "github.com/loft-sh/magpie/pkg/reporting/sender"
 	errors2 "github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -44,7 +46,6 @@ type Target struct {
 }
 
 type Reconciler struct {
-	Client         client.Client
 	filteredReader filtered.Reader
 	configMapNS    string
 	target         Target
@@ -110,7 +111,7 @@ func (r *Reconciler) SyncTargetDelete(ctx context.Context, key eventstores2.Reso
 func SetupWithManagerForTargets(ctx context.Context, mgr ctrl.Manager, targets []Target, cmNS, url string) error {
 	for _, target := range targets {
 		filteredReader := filtered.NewReader(mgr.GetClient(), target.GVK, append(target.Fields, requiredFields...))
-		eventStore, err := idempotent.NewStore(cmNS, target.GVK, mgr.GetClient(), filteredReader)
+		eventStore, err := idempotent.NewStore(cmNS, target.GVK, sign.NewClient(mgr.GetClient()))
 		if err != nil {
 			return errors2.Wrap(err, "failed to create event store")
 		}
@@ -127,7 +128,6 @@ func SetupWithManagerForTargets(ctx context.Context, mgr ctrl.Manager, targets [
 			}
 		}()
 		r := &Reconciler{
-			Client:         mgr.GetClient(),
 			filteredReader: filteredReader,
 			target:         target,
 			store:          eventStore,

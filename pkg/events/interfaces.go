@@ -1,4 +1,4 @@
-package eventstores
+package events
 
 import (
 	"context"

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/loft-sh/magpie/pkg/eventstores"
+	"github.com/loft-sh/magpie/pkg/events"
 	"github.com/loft-sh/magpie/pkg/reporting"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -15,12 +15,12 @@ import (
 )
 
 type storeReader interface {
-	ListAll(ctx context.Context) ([]eventstores.KeyedEvent, error)
+	ListAll(ctx context.Context) ([]events.KeyedEvent, error)
 	GetGVK() schema.GroupVersionKind
 }
 
 type storeClearer interface {
-	ClearEvents(ctx context.Context, events []eventstores.KeyedEvent) error
+	ClearEvents(ctx context.Context, events []events.KeyedEvent) error
 }
 
 type Sender struct {

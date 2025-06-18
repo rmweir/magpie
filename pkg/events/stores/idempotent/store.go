@@ -8,8 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/loft-sh/magpie/pkg/client/filtered"
-	eventstores2 "github.com/loft-sh/magpie/pkg/eventstores"
+	eventstores2 "github.com/loft-sh/magpie/pkg/events"
 	errors2 "github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -29,10 +28,9 @@ const (
 
 type Store struct {
 	sync.RWMutex
-	client         client.Client
-	filteredReader filtered.Reader
-	configMapNS    string
-	gvk            schema.GroupVersionKind
+	client      client.Client
+	configMapNS string
+	gvk         schema.GroupVersionKind
 }
 
 func (e *Store) ClearEvents(ctx context.Context, events []eventstores2.KeyedEvent) error {
@@ -91,6 +89,10 @@ func (e *Store) ListAll(ctx context.Context) ([]eventstores2.KeyedEvent, error) 
 		return nil, fmt.Errorf("failed to get configmap: %w", err)
 	}
 
+	return e.listAllEvents(cm)
+}
+
+func (e *Store) listAllEvents(cm *v1.ConfigMap) ([]eventstores2.KeyedEvent, error) {
 	allKeyedEvents := make([]eventstores2.KeyedEvent, 0)
 	for key := range cm.Data {
 		resourceKey, err := parseResourceKeyFromString(key)
@@ -106,6 +108,13 @@ func (e *Store) ListAll(ctx context.Context) ([]eventstores2.KeyedEvent, error) 
 		allKeyedEvents = append(allKeyedEvents, convertEventsToKeyedEvents(resourceKey, events...)...)
 	}
 
+	slices.SortFunc(allKeyedEvents, func(a, b eventstores2.KeyedEvent) int {
+		if a.Time != b.Time {
+			return a.Time.Compare(b.Time)
+		}
+		return strings.Compare(a.EventID, b.EventID)
+	})
+
 	return allKeyedEvents, nil
 }
 
@@ -119,8 +128,9 @@ func convertEventsToKeyedEvents(resourceKey eventstores2.ResourceKey, events ...
 	}
 	return keyedEvents
 }
-func NewStore(ns string, gvk schema.GroupVersionKind, client client.Client, reader filtered.Reader) (*Store, error) {
-	return &Store{configMapNS: ns, gvk: gvk, client: client, filteredReader: reader}, nil
+
+func NewStore(ns string, gvk schema.GroupVersionKind, client client.Client) (*Store, error) {
+	return &Store{configMapNS: ns, gvk: gvk, client: client}, nil
 }
 
 func (e *Store) List(ctx context.Context, key eventstores2.ResourceKey) ([]eventstores2.Event, error) {
@@ -201,6 +211,7 @@ func (e *Store) Add(ctx context.Context, eventsToAdd ...eventstores2.KeyedEvent)
 			return fmt.Errorf("failed to update configmap: %w", err)
 		}
 	}
+
 	return nil
 }
 
