@@ -37,11 +37,13 @@ func (c *CollectorServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	logBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	err = json.Unmarshal(logBytes, &receivedLogs)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	err = os.WriteFile(c.Filepath(receivedLogs, time.Now()), logBytes, 0644)

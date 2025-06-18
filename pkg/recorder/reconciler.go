@@ -144,10 +144,15 @@ func SetupWithManagerForTargets(ctx context.Context, mgr ctrl.Manager, targets [
 			return errors2.Wrapf(err, "failed to initialize event store for gvk [%s]", target.GVK.String())
 		}
 
+		controllerName := fmt.Sprintf("magpie-%s-%s-%s", target.GVK.Group, target.GVK.Kind, target.GVK.Version)
+		if target.GVK.Group == "" {
+			controllerName = fmt.Sprintf("magpie-%s-%s", target.GVK.Kind, target.GVK.Version)
+		}
+
 		err = ctrl.NewControllerManagedBy(mgr).
 			// Uncomment the following line adding a pointer to an instance of the controlled resource as an argument
 			For(&unstructured.Unstructured{Object: map[string]interface{}{"kind": target.GVK.Kind, "apiVersion": target.GVK.GroupVersion().String()}}).
-			Named("cluster").
+			Named(controllerName).
 			Complete(r)
 		if err != nil {
 			return err
