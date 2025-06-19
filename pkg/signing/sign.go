@@ -35,7 +35,7 @@ func Sign(obj any) ([]byte, error) {
 
 	b, _ := pem.Decode(decodedKey)
 
-	key, err := x509.ParsePKIXPublicKey(b.Bytes)
+	key, err := x509.ParsePKCS8PrivateKey(b.Bytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse private key: %w", err)
 	}

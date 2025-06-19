@@ -28,6 +28,8 @@ func (c Client) Get(ctx context.Context, key client.ObjectKey, obj client.Object
 
 	signature := obj.GetAnnotations()[signatureAnnotation]
 
+	delete(obj.GetAnnotations(), signatureAnnotation)
+
 	err = signing.Verify(obj, []byte(signature))
 	if err != nil {
 		return fmt.Errorf("signature verification failed: %w", err)
