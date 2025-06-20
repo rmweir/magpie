@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ktypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -33,7 +32,7 @@ type Store struct {
 	gvk         schema.GroupVersionKind
 }
 
-func (e *Store) ClearEvents(ctx context.Context, events []eventstores2.KeyedEvent) error {
+func (e *Store) ClearDeletedResourceEvents(ctx context.Context) error {
 	e.Lock()
 	defer e.Unlock()
 
@@ -43,23 +42,25 @@ func (e *Store) ClearEvents(ctx context.Context, events []eventstores2.KeyedEven
 	}
 
 	update := false
-	for _, event := range events {
-		eventsFromEventKey, err := e.listEventsFromConfigMap(cm, event.Key)
+	for key := range cm.Data {
+		resourceKey, err := parseResourceKeyFromString(key)
 		if err != nil {
-			klog.Errorf("failed to list events from configmap %s/%s, skip delete for event [%s]: %v", cm.Namespace, cm.Name, event.EventID, err)
+			return fmt.Errorf("failed to parse resource key from configmap: %w", err)
+		}
+
+		events, err := e.listEventsFromConfigMap(cm, resourceKey)
+		if err != nil {
+			return fmt.Errorf("failed to list events from configmap: %w", err)
+		}
+
+		if !hasDeleteEvent(events) {
 			continue
 		}
-		deleted, eventsAfterDelete := deleteEvent(eventsFromEventKey, event.EventID)
-		if !deleted {
-			continue
-		}
+
+		delete(cm.Data, key)
 		update = true
-		err = e.setEventsInConfigMap(cm, event.Key, eventsAfterDelete)
-		if err != nil {
-			klog.Errorf("failed to set events in configmap %s/%s: %v", cm.Namespace, cm.Name, err)
-			continue
-		}
 	}
+
 	if update {
 		err = e.client.Update(ctx, cm)
 		if err != nil {
@@ -69,15 +70,13 @@ func (e *Store) ClearEvents(ctx context.Context, events []eventstores2.KeyedEven
 	return nil
 }
 
-func deleteEvent(events []eventstores2.Event, eventID string) (bool, []eventstores2.Event) {
-	for index, event := range events {
-		if event.EventID != eventID {
-			continue
+func hasDeleteEvent(events []eventstores2.Event) bool {
+	for _, event := range events {
+		if event.EventType >= eventstores2.Delete {
+			return true
 		}
-		return true, slices.Delete(events, index, index+1)
 	}
-
-	return false, events
+	return false
 }
 
 func (e *Store) ListAll(ctx context.Context) ([]eventstores2.KeyedEvent, error) {

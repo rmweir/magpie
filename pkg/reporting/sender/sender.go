@@ -20,7 +20,7 @@ type storeReader interface {
 }
 
 type storeClearer interface {
-	ClearEvents(ctx context.Context, events []events.KeyedEvent) error
+	ClearDeletedResourceEvents(ctx context.Context) error
 }
 
 type Sender struct {
@@ -77,7 +77,7 @@ func (s *Sender) Run(ctx context.Context) error {
 			}
 
 			// clear
-			err = s.Clearer.ClearEvents(ctx, eventsBundle.Events)
+			err = s.Clearer.ClearDeletedResourceEvents(ctx)
 			if err != nil {
 				klog.Errorf("failed to clear events: %v", err)
 				continue
