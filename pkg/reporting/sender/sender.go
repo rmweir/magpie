@@ -27,6 +27,7 @@ type Sender struct {
 	URL     string
 	Reader  storeReader
 	Clearer storeClearer
+	Client  *http.Client
 }
 
 func (s *Sender) Run(ctx context.Context) error {
@@ -56,7 +57,8 @@ func (s *Sender) Run(ctx context.Context) error {
 			}
 
 			bytesReader := bytes.NewReader(eventsBytes)
-			resp, err := http.Post(s.URL, "application/json", bytesReader)
+
+			resp, err := s.Client.Post(s.URL, "application/json", bytesReader)
 			if err != nil {
 				klog.Errorf("failed to send events: %v", err)
 				continue

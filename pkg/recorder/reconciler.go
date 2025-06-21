@@ -3,6 +3,7 @@ package recorder
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/loft-sh/magpie/pkg/clients/filtered"
 	"github.com/loft-sh/magpie/pkg/clients/sign"
@@ -108,7 +109,7 @@ func (r *Reconciler) SyncTargetDelete(ctx context.Context, key eventstores2.Reso
 	return nil
 }
 
-func SetupWithManagerForTargets(ctx context.Context, mgr ctrl.Manager, targets []Target, cmNS, url string) error {
+func SetupWithManagerForTargets(ctx context.Context, mgr ctrl.Manager, httpClient *http.Client, targets []Target, cmNS, url string) error {
 	for _, target := range targets {
 		filteredReader := filtered.NewReader(mgr.GetClient(), target.GVK, append(target.Fields, requiredFields...))
 		eventStore, err := idempotent.NewStore(cmNS, target.GVK, sign.NewClient(mgr.GetClient()))
@@ -120,6 +121,7 @@ func SetupWithManagerForTargets(ctx context.Context, mgr ctrl.Manager, targets [
 			URL:     url,
 			Reader:  eventStore,
 			Clearer: eventStore,
+			Client:  httpClient,
 		}
 		go func() {
 			err := sender.Run(ctx)
