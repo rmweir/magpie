@@ -109,7 +109,7 @@ func (r *Reconciler) SyncTargetDelete(ctx context.Context, key eventstores2.Reso
 	return nil
 }
 
-func SetupWithManagerForTargets(ctx context.Context, mgr ctrl.Manager, httpClient *http.Client, targets []Target, cmNS, url string) error {
+func SetupWithManagerForTargets(ctx context.Context, mgr ctrl.Manager, httpClient *http.Client, targets []Target, cmNS, peerID, url string) error {
 	for _, target := range targets {
 		filteredReader := filtered.NewReader(mgr.GetClient(), target.GVK, append(target.Fields, requiredFields...))
 		eventStore, err := idempotent.NewStore(cmNS, target.GVK, sign.NewClient(mgr.GetClient()))
@@ -117,12 +117,8 @@ func SetupWithManagerForTargets(ctx context.Context, mgr ctrl.Manager, httpClien
 			return errors2.Wrap(err, "failed to create event store")
 		}
 
-		sender := &sender2.Sender{
-			URL:     url,
-			Reader:  eventStore,
-			Clearer: eventStore,
-			Client:  httpClient,
-		}
+		sender := sender2.NewSender(url, peerID, eventStore, eventStore, httpClient, nil, nil)
+
 		go func() {
 			err := sender.Run(ctx)
 			if err != nil {

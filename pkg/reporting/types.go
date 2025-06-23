@@ -9,3 +9,7 @@ type EventsBundle struct {
 	GVK    schema.GroupVersionKind `json:"gvk"`
 	Events []events.KeyedEvent     `json:"events"`
 }
+
+type HealthPing struct {
+	Peer string `json:"peer"`
+}
